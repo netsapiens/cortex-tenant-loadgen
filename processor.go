@@ -138,7 +138,8 @@ func (p *processor) handle(ctx *fh.RequestCtx) {
 		return
 	}
 
-	m, err := p.createWriteRequests(wrReqIn)
+
+	m, err := p.createWriteRequests(wrReqIn,1)
 	if err != nil {
 		ctx.Error(err.Error(), fh.StatusBadRequest)
 		return
@@ -146,6 +147,20 @@ func (p *processor) handle(ctx *fh.RequestCtx) {
 
 	var errs *me.Error
 	results := p.dispatch(clientIP, reqID, m)
+
+
+	if p.cfg.DuplicateMessage > 0 {
+		for i := 2; i <= p.cfg.DuplicateMessage; i++ {
+			m, err := p.createWriteRequests(wrReqIn,i)
+			if err != nil {
+				ctx.Error(err.Error(), fh.StatusBadRequest)
+				return
+			}
+
+			p.dispatch(clientIP, reqID, m)
+		}
+	}
+
 
 	code, body := 0, []byte("Ok")
 
@@ -182,12 +197,12 @@ out:
 	ctx.SetStatusCode(code)
 }
 
-func (p *processor) createWriteRequests(wrReqIn *prompb.WriteRequest) (map[string]*prompb.WriteRequest, error) {
+func (p *processor) createWriteRequests(wrReqIn *prompb.WriteRequest, tenantId int) (map[string]*prompb.WriteRequest, error) {
 	// Create per-tenant write requests
 	m := map[string]*prompb.WriteRequest{}
 
 	for _, ts := range wrReqIn.Timeseries {
-		tenant, err := p.processTimeseries(&ts)
+		tenant, err := p.processTimeseries(&ts,tenantId)
 		if err != nil {
 			return nil, err
 		}
@@ -253,7 +268,7 @@ func (p *processor) dispatch(clientIP net.Addr, reqID uuid.UUID, m map[string]*p
 	return
 }
 
-func (p *processor) processTimeseries(ts *prompb.TimeSeries) (tenant string, err error) {
+func (p *processor) processTimeseries(ts *prompb.TimeSeries, tenantId int) (tenant string, err error) {
 	idx := 0
 	for i, l := range ts.Labels {
 		if l.Name == p.cfg.Tenant.Label {
@@ -267,7 +282,7 @@ func (p *processor) processTimeseries(ts *prompb.TimeSeries) (tenant string, err
 			return "", fmt.Errorf("label '%s' not found", p.cfg.Tenant.Label)
 		}
 
-		return p.cfg.Tenant.Default, nil
+		return fmt.Sprintf("%s%d", p.cfg.Tenant.Default, tenantId), nil
 	}
 
 	if p.cfg.Tenant.LabelRemove {

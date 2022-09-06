@@ -1,3 +1,8 @@
+
+# cortex-tenant-loadgen
+
+This is a fork of cortex-tenant with a focus on using this to multiply the proxied data and allow it to be used as a load testing tool for cortex/mimir by taking valid data for a single tenant and sending it to duplicate itself as multiple tenants. One new config is added, duplicate_message which can be set to the number of copies you want. It will use the default tenant name from config and add a number to the end starting with 2 up to the number configured as duplicate_message. In intial testing 50 allowed us to accept data and then forward it on with the mimir cluster seeing what looked like 50 tenants sending their unique data.
+
 # cortex-tenant
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/blind-oracle/cortex-tenant)](https://goreportcard.com/report/github.com/blind-oracle/cortex-tenant)

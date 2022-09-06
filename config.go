@@ -19,6 +19,7 @@ type config struct {
 	Timeout         time.Duration
 	TimeoutShutdown time.Duration `yaml:"timeout_shutdown"`
 	Concurrency     int
+	DuplicateMessage int `yaml:"duplicate_message"`
 	Metadata        bool
 
 	Tenant struct {
